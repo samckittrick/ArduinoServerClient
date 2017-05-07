@@ -29,10 +29,7 @@ public class BasicSharedSecretScheme extends AuthenticationScheme implements Par
      * @param id Client ID to be passed to server.
      */
     public BasicSharedSecretScheme(String secret,  int id) {
-        this.secret = secret;
-        this.id = id;
-        isAuthenticated = false;
-        helper = new TimeHelper();
+        this(secret,id, new TimeHelper());
     }
 
     protected BasicSharedSecretScheme(String secret, int id, TimeHelper helper)
@@ -150,7 +147,11 @@ public class BasicSharedSecretScheme extends AuthenticationScheme implements Par
      * This class is created to allow the time to be mocked in unit testing.
      */
     protected static class TimeHelper {
-            public Date getCurrentTime()
+        /**
+         * Returns the current time as a date object.
+         * @return Date object representing the current time.
+         */
+        public Date getCurrentTime()
             {
                 return new Date();
             }

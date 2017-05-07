@@ -28,8 +28,8 @@ public class PacketReaderTest {
         ByteArrayInputStream b = new ByteArrayInputStream(testPacket);
         PacketReader p = new PacketReader(b);
 
-        PacketReader.Packet read = p.read();
-        Assert.assertEquals(PacketReader.PACKET_TYPE_AUTH, read.getType());
+        PacketConstants.Packet read = p.read();
+        Assert.assertEquals(PacketConstants.PACKET_TYPE_AUTH, read.getType());
         Assert.assertTrue(Arrays.equals(testData, read.getData()));
     }
 }

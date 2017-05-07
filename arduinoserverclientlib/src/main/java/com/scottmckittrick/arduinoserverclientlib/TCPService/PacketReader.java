@@ -14,8 +14,6 @@ public class PacketReader {
 
     /** The number of bytes read into the framing header */
     private int frameCount = 0;
-    /** The size of a framing header **/
-    private static final int FRAME_LEAD_SIZE = 2;
 
     /** The length of the packet as read from the header **/
     private int dataLen = 0;
@@ -25,11 +23,6 @@ public class PacketReader {
     private byte[] data;
     /** the amount of data that has been read */
     private int dataRead = 0;
-
-    /** Auth type identifier. Value is 0x01 */
-    public static final byte PACKET_TYPE_AUTH = 0x01;
-    /** Data type identifier. Value is 0x02 */
-    public static final byte PACKET_TYPE_DATA = 0x02;
 
     /**
      * Constructor for the packet reader. Takes an input stream to read.
@@ -46,14 +39,14 @@ public class PacketReader {
      * @return Packet object representing the received packet.
      * @throws IOException If input stream is invalid.
      */
-    public Packet read() throws IOException
+    public PacketConstants.Packet read() throws IOException
     {
         if(istream == null)
             throw new IOException("InputStream is null");
 
         //Read the frame header first
-        while(frameCount < FRAME_LEAD_SIZE)
-            dataLen |= istream.read() << (FRAME_LEAD_SIZE - frameCount++ - 1); //As we read it in, place it in the data length variable
+        while(frameCount < PacketConstants.FRAME_LEAD_SIZE)
+            dataLen |= istream.read() << (PacketConstants.FRAME_LEAD_SIZE - frameCount++ - 1); //As we read it in, place it in the data length variable
 
         //Next read the type
         packetType = (byte)istream.read();
@@ -69,46 +62,18 @@ public class PacketReader {
         }
 
         //Once the packet is read. Package it.
-        Packet p = new Packet(packetType, data);
+        PacketConstants.Packet p = new PacketConstants.Packet(packetType, data);
         return p;
     }
 
-
     /**
-     * Immutable packet class containing the packet that was received.
+     * close the reader and stream.
+     * @throws IOException
      */
-    public static class Packet {
-        private byte packetType;
-        private byte[] data;
-
-        /**
-         * Creates a new packet
-         * @param type The type of packet.
-         * @param data Byte array of data.
-         */
-        public Packet(byte type, byte[] data)
-        {
-            this.packetType = type;
-            this.data = new byte[data.length];
-            System.arraycopy(data, 0, this.data, 0, data.length);
-        }
-
-        /**
-         * Get the type of packet
-         * @return byte representing the type of packet.
-         */
-        public byte getType() { return packetType; };
-
-        /**
-         * Retrieve the data from the packet
-         * @return Copy of the byte array of data.
-         */
-        public byte[] getData()
-        {
-            byte[] out = new byte[data.length];
-            System.arraycopy(data, 0, out, 0, data.length);
-            return out;
-        }
+    public void close() throws IOException
+    {
+        if(istream != null)
+            istream.close();
     }
 
 }
