@@ -14,7 +14,7 @@ public class Authenticator {
      */
     public static final byte AUTHTYPE_CLIENT_HELLO = 0x01;
     /**
-     * Server hello identifier. Value is 0x02
+     * ServerService hello identifier. Value is 0x02
      */
     public static final byte AUTHTYPE_SERVER_HELLO = 0x02;
     /**

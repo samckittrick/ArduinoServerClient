@@ -104,10 +104,12 @@ public class BasicSharedSecretScheme extends AuthenticationScheme implements Par
     }
 
     public static final Parcelable.Creator<BasicSharedSecretScheme> CREATOR = new Parcelable.Creator<BasicSharedSecretScheme>() {
+        @Override
         public BasicSharedSecretScheme createFromParcel(Parcel p) {
             return new BasicSharedSecretScheme(p);
         }
 
+        @Override
         public BasicSharedSecretScheme[] newArray(int size) {
             return new BasicSharedSecretScheme[size];
         }
