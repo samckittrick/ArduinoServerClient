@@ -1,11 +1,17 @@
 package com.scottmckittrick.arduinoserverclientlib;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
+import java.util.Arrays;
+
 /**
  * Immutable object representing an request from one object to another.
  * Created by Scott on 4/23/2017.
  */
 
-public class RequestObject {
+//ToDo make parcelable.
+public class RequestObject implements Parcelable {
     /** The size of the serialized header */
     public static int HEADER_SIZE = 3;
 
@@ -91,6 +97,62 @@ public class RequestObject {
         byte[] arr = new byte[data.length];
         System.arraycopy(data, 0, arr, 0, data.length);
         return arr;
+    }
+
+    //Parcelable functions
+    @Override
+    public int describeContents() { return 0; }
+
+    @Override
+    public void writeToParcel(Parcel out, int flags)
+    {
+        out.writeInt(deviceId);
+        out.writeInt(command);
+        out.writeInt(data.length);
+        out.writeByteArray(data);
+    }
+
+    public static final Parcelable.Creator<RequestObject> CREATOR = new Parcelable.Creator<RequestObject>() {
+        @Override
+        public RequestObject createFromParcel(Parcel p) {
+            return new RequestObject(p);
+        }
+
+        @Override
+        public RequestObject[] newArray(int size) {
+            return new RequestObject[size];
+        }
+    };
+
+    /**
+     * Constructor for creating from a parcel
+     * @param p Parcel to be referenced
+     */
+    private RequestObject(Parcel p)
+    {
+        deviceId = p.readInt();
+        command = (short)p.readInt();
+        int dataLen = p.readInt();
+        data = new byte[dataLen];
+        p.readByteArray(data);
+    }
+
+    @Override
+    public boolean equals(Object other)
+    {
+        if(other == null)
+            return false;
+
+        if(!RequestObject.class.isAssignableFrom(other.getClass()))
+            return false;
+
+        final RequestObject otherReq = (RequestObject)other;
+
+        boolean result = true;
+        result &= (this.deviceId == otherReq.deviceId);
+        result &= (this.command == otherReq.command);
+        result &= Arrays.equals(this.data, otherReq.data);
+        return result;
     }
 
     /**

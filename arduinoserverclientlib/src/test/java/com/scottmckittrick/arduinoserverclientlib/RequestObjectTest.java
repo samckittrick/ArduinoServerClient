@@ -50,4 +50,17 @@ public class RequestObjectTest {
         Assert.assertArrayEquals(dataArray, result.getData());
     }
 
+    @Test
+    public void testEquals()
+    {
+        byte[] arr1 = { 0x01, 0x02, 0x03 };
+        byte[] arr2 = {0x03, 0x02, 0x01, 0x00 };
+        RequestObject req1 = new RequestObject(1, (short)2, arr1);
+        RequestObject req2 = new RequestObject(1, (short)2, arr1);
+        RequestObject req3 = new RequestObject(2, (short)3, arr2);
+
+        Assert.assertEquals(req1, req2);
+        Assert.assertNotEquals(req1, req3);
+    }
+
 }

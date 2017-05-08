@@ -2,8 +2,6 @@ package com.scottmckittrick.arduinoserverclientlib.TCPService;
 
 import android.os.AsyncTask;
 
-import com.scottmckittrick.arduinoserverclientlib.RequestObject;
-
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
@@ -16,7 +14,7 @@ import java.net.UnknownHostException;
  * Created by Scott on 5/6/2017.
  */
 
-public class Connection implements PacketReceiver {
+public class Connection {
     /** The Ipv4 Address of the server */
     private String ipAddr;
     /** The port of the server */
@@ -35,8 +33,6 @@ public class Connection implements PacketReceiver {
     private boolean isConnected;
     /** Object to send received packets to */
     private PacketReceiver receiver;
-    /** Set the object to send parsed requests to */
-    private RequestObject.RequestReceiver reqReceiver;
     /** The read task */
     private PacketReadTask readTask;
 
@@ -58,10 +54,11 @@ public class Connection implements PacketReceiver {
      * @param port The port of the server
      * @param timeout The length of time in milliseconds that the socket should wait.
      */
-    public Connection(String ipAddr, int port, int timeout)
+    public Connection( String ipAddr, int port, int timeout)
     {
         this(ipAddr, port, timeout, null);
     }
+
 
 
     /**
@@ -69,26 +66,25 @@ public class Connection implements PacketReceiver {
      * @param ipAddr The ipv4 address of the server
      * @param port The port of the server
      * @param timeout The length of time in milliseconds that the socket should wait.
-     * @param r The object recieving a packet
+     * @param r A packet receiver to be called when a packet is received.
      */
-    public Connection( String ipAddr, int port, int timeout, RequestObject.RequestReceiver r)
+    public Connection( String ipAddr, int port, int timeout, PacketReceiver r)
     {
         this.ipAddr = ipAddr;
         this.port = port;
         this.timeout = timeout;
         isRunning = false;
         isConnected = false;
-        reqReceiver = r;
-        receiver = this;
+        receiver = r;
     }
 
     /**
-     * Set the object that will receive packets from the connection
-     * @param r Packet Receiver object
+     * Set a callback to receive the packets read from the socket
+     * @param r A packet receiver to be called when a packet is received.
      */
-    public void setPacketReceiver(RequestObject.RequestReceiver r)
+    public void setPacketReceiver(PacketReceiver r)
     {
-        reqReceiver = r;
+        receiver = r;
     }
 
     /**
@@ -163,17 +159,12 @@ public class Connection implements PacketReceiver {
 
     /**
      * Send a packet to the server
-     * @param packet Packet to be sent
+     * @param p packet being sent
      * @throws IOException Thrown when there is a problem sending the packet.
      */
-    public void writePacket(PacketConstants.Packet packet) throws IOException
+    public void writePacket(PacketConstants.Packet p ) throws IOException
     {
-        packetWriter.writePacket(packet);
-    }
-
-    @Override
-    public void onPacketReceived(PacketConstants.Packet packet) {
-        //ToDo do something with the packet
+        packetWriter.writePacket(p);
     }
 
     /**
