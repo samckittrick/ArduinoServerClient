@@ -10,7 +10,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
 /**
- * Provides and manages tcp connections to the server
+ * Provides and manages tcp connections to the server.
  * Created by Scott on 5/6/2017.
  */
 

@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * Wraps an output stream and formats input into packets
+ * Wraps an output stream and formats input into packets.
  * Created by Scott on 5/6/2017.
  */
 

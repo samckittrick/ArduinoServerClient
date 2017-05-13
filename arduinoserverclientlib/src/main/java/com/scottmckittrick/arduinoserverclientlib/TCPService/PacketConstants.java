@@ -1,6 +1,7 @@
 package com.scottmckittrick.arduinoserverclientlib.TCPService;
 
 /**
+ * Definition of constants used when processing packets.
  * Created by Scott on 5/6/2017.
  */
 
