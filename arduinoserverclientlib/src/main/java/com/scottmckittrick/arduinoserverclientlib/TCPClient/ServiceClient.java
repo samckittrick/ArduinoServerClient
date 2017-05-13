@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -32,6 +33,8 @@ public abstract class ServiceClient {
     private static final String TAG = "ArduinoServerClient";
     /** Local message handler for receiving messages from the service */
     private Messenger myMessenger;
+    /** Indicates whether or not the service is bound. */
+    private boolean isBound;
 
     /**
      * Constructor for creating the service client
@@ -40,6 +43,7 @@ public abstract class ServiceClient {
     public ServiceClient(Context ctx)
     {
         this.ctx = ctx;
+        isBound = false;
     }
 
     /**
@@ -53,6 +57,7 @@ public abstract class ServiceClient {
             @Override
             public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
                 serviceMessenger = new Messenger(iBinder);
+                isBound = true;
             }
 
             @Override
@@ -66,6 +71,7 @@ public abstract class ServiceClient {
             return false;
         }
 
+        //Actually bind the service
         if(ctx.bindService(new Intent(ctx, ServerService.class), sConn, Context.BIND_AUTO_CREATE))
         {
             Log.i(TAG,"Successfully bound to service.");
@@ -74,6 +80,7 @@ public abstract class ServiceClient {
         {
             Log.e(TAG, "Error binding to service");
             ctx.unbindService(sConn);
+            isBound = false;
             return false;
         }
 
@@ -90,12 +97,58 @@ public abstract class ServiceClient {
 
         return true;
     }
+
+    /**
+     * Unbind from the service.
+     * @return True if successful.
+     */
+    public boolean unbind()
+    {
+        Message msg = Message.obtain(null, ServerService.MSG_UNREGISTER_CLIENT);
+        msg.replyTo = myMessenger;
+        try
+        {
+            serviceMessenger.send(msg);
+        }
+        catch(RemoteException e) {
+            Log.e(TAG, "Error unregistering client handler");
+        }
+
+        ctx.unbindService(sConn);
+        isBound = false;
+        return true;
+    }
+
+    /**
+     * Tell the service to connect to a server
+     * @param ip The ip of the server
+     * @param port the port of the server
+     * @return True if the message is sent successfully, false otherwise.
+     * @throws ServiceNotBoundException Thrown if the service hasn't been bound to first.
+     */
+    public boolean sendConnect(String ip, int port) throws ServiceNotBoundException {
+        if(!isBound)
+            throw new ServiceNotBoundException("Service must be bound first");
+
+        Message msg = Message.obtain(null, ServerService.MSG_CONNECT_SERVER);
+        Bundle data = new Bundle();
+        data.putString(ServerService.KEY_SERVER_IP, ip);
+        data.putInt(ServerService.KEY_SERVER_PORT, port);
+        msg.setData(data);
+        try {
+            serviceMessenger.send(msg);
+            return true;
+        }catch(RemoteException e) {
+            Log.e(TAG, "Error sending message");
+            return false;
+        }
+    }
     /*
     Function listing:
     implemented:
         bind - done
-        unbind
-        connect
+        unbind - done
+        connect - done
         disconnect
         setAuthenticationScheme
         sendRequest
@@ -103,7 +156,6 @@ public abstract class ServiceClient {
         handleResponse - done
 
      */
-
 
     /**
      * Function for handling incoming messages from the service.
