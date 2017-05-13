@@ -34,26 +34,28 @@ public class ServerService extends Service implements PacketReceiver {
     public static final int MSG_UNREGISTER_CLIENT = 2;
     /** Service Message Type indicating that the message contains a selected Authentication scheme. */
     public static final int MSG_AUTHSCHEME_SELECT = 3;
+    /** Service Message Type indicating that the authentication scheme is already selected. */
+    public static final int MSH_AUTHSCHEME_ALREADY_SELECTED = 4;
     /** Service Message type indicating the service should connect to the server. */
-    public static final int MSG_CONNECT_SERVER = 4;
+    public static final int MSG_CONNECT_SERVER = 5;
     /** Service Message type indicating that the service should disconnect from the server. */
-    public static final int MSG_DISCONNECT_SERVER = 5;
+    public static final int MSG_DISCONNECT_SERVER = 6;
     /** Service Message type indicating that the connection to the server succeeded. */
-    public static final int MSG_CONNECT_SUCCESS = 6;
+    public static final int MSG_CONNECT_SUCCESS = 7;
     /** Service Message type indicating that the connection to the server failed. */
-    public static final int MSG_CONNECT_FAILURE = 7;
+    public static final int MSG_CONNECT_FAILURE = 8;
     /** Service Message type indicating that the authentication to the server succeeded. */
-    public static final int MSG_AUTHENTICATION_SUCCEEDED = 8;
+    public static final int MSG_AUTHENTICATION_SUCCEEDED = 9;
     /** Service Message type inidicating that the authentication to the server failed */
-    public static final int MSG_AUTHENTICATION_FAILED = 9;
+    public static final int MSG_AUTHENTICATION_FAILED = 10;
     /** Service Message type indicating that the message contains a request object to be passed to the server. */
-    public static final int MSG_REQUEST_OBJECT = 10;
+    public static final int MSG_REQUEST_OBJECT = 11;
     /** Service Message type indicating that the request object was invalid */
-    public static final int MSG_REQUEST_SEND_FAILED = 11;
+    public static final int MSG_REQUEST_SEND_FAILED = 12;
     /** Service Message type indicating that the server was disconnected. */
-    public static final int MSG_SERVER_DISCONNECTED = 12;
+    public static final int MSG_SERVER_DISCONNECTED = 13;
 
-    //Bunclde keys
+    //Bunlde keys
     /** Bundle key name for saving and accessing an AuthenticationScheme stored in a bundle. */
     public static final String KEY_AUTHSCHEME = "authenticationScheme";
     /** Bundle key name for saving and accessing a request object */
@@ -353,6 +355,7 @@ public class ServerService extends Service implements PacketReceiver {
                 //Ignore them if they come from the client.
                 case MSG_AUTHENTICATION_FAILED:
                 case MSG_AUTHENTICATION_SUCCEEDED:
+                case MSH_AUTHSCHEME_ALREADY_SELECTED:
                 case MSG_CONNECT_FAILURE:
                 case MSG_CONNECT_SUCCESS:
                     break;
