@@ -102,14 +102,7 @@ public class ServerService extends Service implements PacketReceiver {
     @Override
     public boolean onUnbind(Intent i)
     {
-        try {
-            conn.disconnect();
-        }catch(IOException e)
-        {
-            Log.e(TAG, "Error disconnecting socket");
-        }
-        conn = null;
-        isConnected = false;
+        disconnectServer();
         return false;
     }
 
