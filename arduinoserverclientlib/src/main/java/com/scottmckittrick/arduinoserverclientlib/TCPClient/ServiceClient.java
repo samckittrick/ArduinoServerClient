@@ -143,6 +143,21 @@ public abstract class ServiceClient {
             return false;
         }
     }
+
+    //Send a disconnect command to the server.
+    public boolean sendDisconnect() throws ServiceNotBoundException {
+        if(!isBound)
+            throw new ServiceNotBoundException("Service must be bound first");
+
+        Message msg = Message.obtain(null, ServerService.MSG_DISCONNECT_SERVER);
+        try{
+            serviceMessenger.send(msg);
+            return true;
+        } catch(RemoteException e) {
+            Log.e(TAG, "Error Sending message");
+            return false;
+        }
+    }
     /*
     Function listing:
     implemented:
