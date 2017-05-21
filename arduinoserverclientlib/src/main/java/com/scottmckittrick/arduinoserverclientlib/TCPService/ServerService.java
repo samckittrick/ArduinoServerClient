@@ -35,7 +35,7 @@ public class ServerService extends Service implements PacketReceiver {
     /** Service Message Type indicating that the message contains a selected Authentication scheme. */
     public static final int MSG_AUTHSCHEME_SELECT = 3;
     /** Service Message Type indicating that the authentication scheme is already selected. */
-    public static final int MSH_AUTHSCHEME_ALREADY_SELECTED = 4;
+    public static final int MSG_AUTHSCHEME_ALREADY_SELECTED = 4;
     /** Service Message type indicating the service should connect to the server. */
     public static final int MSG_CONNECT_SERVER = 5;
     /** Service Message type indicating that the service should disconnect from the server. */
@@ -348,7 +348,7 @@ public class ServerService extends Service implements PacketReceiver {
                 //Ignore them if they come from the client.
                 case MSG_AUTHENTICATION_FAILED:
                 case MSG_AUTHENTICATION_SUCCEEDED:
-                case MSH_AUTHSCHEME_ALREADY_SELECTED:
+                case MSG_AUTHSCHEME_ALREADY_SELECTED:
                 case MSG_CONNECT_FAILURE:
                 case MSG_CONNECT_SUCCESS:
                     break;

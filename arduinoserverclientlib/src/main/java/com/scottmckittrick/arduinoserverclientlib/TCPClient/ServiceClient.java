@@ -36,6 +36,9 @@ public abstract class ServiceClient {
     /** Indicates whether or not the service is bound. */
     private boolean isBound;
 
+    //ToDo Add Change Notifier member
+    //ToDo Handle Some request objects here.
+
     /**
      * Constructor for creating the service client
      * @param ctx The against which services may be called.
@@ -144,7 +147,10 @@ public abstract class ServiceClient {
         }
     }
 
-    //Send a disconnect command to the server.
+    /**
+     * Send a disconnect command to the server.
+     * @throws ServiceNotBoundException Thrown when the client isn't yet bound to the service.
+     */
     public boolean sendDisconnect() throws ServiceNotBoundException {
         if(!isBound)
             throw new ServiceNotBoundException("Service must be bound first");
@@ -158,19 +164,57 @@ public abstract class ServiceClient {
             return false;
         }
     }
-    /*
-    Function listing:
-    implemented:
-        bind - done
-        unbind - done
-        connect - done
-        disconnect
-        setAuthenticationScheme
-        sendRequest
-    abstract:
-        handleResponse - done
 
+    /**
+     * Set an authentication scheme in the service. This allows the client to choose and set up the authentication scheme before sending it to the service.
+     * @param authScheme The AuthenticationScheme to send to the service
+     * @return True if the message was sent successfully. False otherwise.
+     * @throws ServiceNotBoundException Throws a ServiceNotBoundException when the service is not yet bound.
      */
+    public boolean setAuthentciationScheme(AuthenticationScheme authScheme) throws ServiceNotBoundException {
+        if(!isbound)
+            throw new ServiceNotBoundException("Service must be bound first");
+
+        Message msg = Message.obtain(null, ServerService.MSG_AUTHSCHEME_SELECT);
+        Bundle b = new Bundle();
+        b.putParcelable(ServiceService.KEY_AUTHSCHEME, authScheme);
+        msg.setData(b);
+
+        try
+        {
+            serviceMessenger.send(msg);
+            return true;
+        } catch(RemoteException e) {
+            Log.e(TAG, "Error sending message");
+            return false;
+        }
+    }
+
+    /**
+     * Send a request object to the service to be sent to the server.
+     * @param r RequestObject to be sent
+     * @return True if the message was successful, false otherwise.
+     * @throws ServiceNotBoundException Thrown if the service is not already bound.
+     */
+    public boolean sendRequest(RequestObject r) throws ServiceNotBoundException
+    {
+        if(!isBound)
+            throw new ServiceNotBoundException("Service must be bound first");
+
+        Message msg = Message.obtain(null, ServerService.MSG_REQUEST_OBJECT);
+        Bundle b = new Bundle();
+        b.putParcelable(ServerService.KEY_REQUEST_OBJECT, r);
+        msg.setData(b);
+
+        try
+        {
+            serviceMessenger.send(msg);
+            return true;
+        } catch(RemoteException e) {
+            Log.e(TAG, "Error sending message");
+            return false;
+        }
+    }
 
     /**
      * Function for handling incoming messages from the service.
