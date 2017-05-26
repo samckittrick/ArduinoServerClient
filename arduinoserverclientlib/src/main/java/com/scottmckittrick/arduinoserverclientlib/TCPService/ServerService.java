@@ -54,6 +54,10 @@ public class ServerService extends Service implements PacketReceiver {
     public static final int MSG_REQUEST_SEND_FAILED = 12;
     /** Service Message type indicating that the server was disconnected. */
     public static final int MSG_SERVER_DISCONNECTED = 13;
+    /** Service Message type indicating that the client is bound to the service */
+    public static final int MSG_BOUND = 14;
+    /** Service Message type indicating that the client is unbound. */
+    public static final int MSG_UNBOUND = 15;
 
     //Bunlde keys
     /** Bundle key name for saving and accessing an AuthenticationScheme stored in a bundle. */
@@ -93,6 +97,7 @@ public class ServerService extends Service implements PacketReceiver {
 
     @Override
     public IBinder onBind(Intent i) {
+        Log.d(TAG, "Client is binding to service");
         if(serviceMessenger == null)
             serviceMessenger = new Messenger(new ServerServiceHandler());
         return serviceMessenger.getBinder();
@@ -155,6 +160,7 @@ public class ServerService extends Service implements PacketReceiver {
             return;
         }
 
+        b.setClassLoader(AuthenticationScheme.class.getClassLoader());
         AuthenticationScheme auth = b.getParcelable(KEY_AUTHSCHEME);
         if(auth == null) {
             Log.e(TAG, "No Auth scheme provided");

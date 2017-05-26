@@ -1,4 +1,4 @@
-package com.scottmckittrick.arduinoserverclientlib.TCPClient;
+package com.scottmckittrick.arduinoserverclientlib.Devices;
 
 /**
  * Exception thrown when a device isn't found in the device list.

@@ -1,4 +1,4 @@
-package com.scottmckittrick.arduinoserverclientlib.TCPClient;
+package com.scottmckittrick.arduinoserverclientlib.Devices;
 
 /**
  * Thrown when the device manager receives an invalid device list from the server.

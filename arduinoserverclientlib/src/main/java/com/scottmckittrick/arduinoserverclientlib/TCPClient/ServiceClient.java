@@ -12,6 +12,8 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.util.Log;
 
+import com.scottmckittrick.arduinoserverclientlib.AuthenticationScheme.AuthenticationScheme;
+import com.scottmckittrick.arduinoserverclientlib.RequestObject;
 import com.scottmckittrick.arduinoserverclientlib.TCPService.ServerService;
 
 /**
@@ -21,7 +23,7 @@ import com.scottmckittrick.arduinoserverclientlib.TCPService.ServerService;
  * Created by Scott on 5/11/2017.
  */
 
-public abstract class ServiceClient {
+public class ServiceClient implements RequestObject.RequestReceiver {
 
     /** Context used for calling the service */
     private Context ctx;
@@ -36,8 +38,10 @@ public abstract class ServiceClient {
     /** Indicates whether or not the service is bound. */
     private boolean isBound;
 
-    //ToDo Add Change Notifier member
-    //ToDo Handle Some request objects here.
+    /** Receiver for messages related to the state of the server connection **/
+    private ServiceMessageReceiver messageReceiver;
+    /**Receiver for request objects sent from the server via the ServerService **/
+    private RequestObject.RequestReceiver requestReceiver;
 
     /**
      * Constructor for creating the service client
@@ -59,13 +63,19 @@ public abstract class ServiceClient {
         sConn = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+                Log.d(TAG, "Service has been connected.");
                 serviceMessenger = new Messenger(iBinder);
+                registerMessenger();
                 isBound = true;
+                if(messageReceiver != null)
+                    messageReceiver.onMessageReceived(Message.obtain(null, ServerService.MSG_BOUND));
             }
 
             @Override
             public void onServiceDisconnected(ComponentName componentName) {
                 serviceMessenger = null;
+                if(messageReceiver != null)
+                    messageReceiver.onMessageReceived(Message.obtain(null, ServerService.MSG_UNBOUND));
             }
         };
 
@@ -87,6 +97,11 @@ public abstract class ServiceClient {
             return false;
         }
 
+        return true;
+    }
+
+    private void registerMessenger()
+    {
         //Register this object's messenger
         myMessenger = new Messenger(new ServiceClientHandler());
         Message msg = Message.obtain(null, ServerService.MSG_REGISTER_CLIENT);
@@ -95,10 +110,7 @@ public abstract class ServiceClient {
             serviceMessenger.send(msg);
         }catch(RemoteException r) {
             Log.e(TAG, "Error registering client handler");
-            return false;
         }
-
-        return true;
     }
 
     /**
@@ -172,12 +184,12 @@ public abstract class ServiceClient {
      * @throws ServiceNotBoundException Throws a ServiceNotBoundException when the service is not yet bound.
      */
     public boolean setAuthentciationScheme(AuthenticationScheme authScheme) throws ServiceNotBoundException {
-        if(!isbound)
+        if(!isBound)
             throw new ServiceNotBoundException("Service must be bound first");
 
         Message msg = Message.obtain(null, ServerService.MSG_AUTHSCHEME_SELECT);
         Bundle b = new Bundle();
-        b.putParcelable(ServiceService.KEY_AUTHSCHEME, authScheme);
+        b.putParcelable(ServerService.KEY_AUTHSCHEME, authScheme);
         msg.setData(b);
 
         try
@@ -196,10 +208,11 @@ public abstract class ServiceClient {
      * @return True if the message was successful, false otherwise.
      * @throws ServiceNotBoundException Thrown if the service is not already bound.
      */
-    public boolean sendRequest(RequestObject r) throws ServiceNotBoundException
+    @Override
+    public void handleRequest(RequestObject r)
     {
         if(!isBound)
-            throw new ServiceNotBoundException("Service must be bound first");
+            Log.e(TAG, "Service not yet bound");
 
         Message msg = Message.obtain(null, ServerService.MSG_REQUEST_OBJECT);
         Bundle b = new Bundle();
@@ -209,18 +222,54 @@ public abstract class ServiceClient {
         try
         {
             serviceMessenger.send(msg);
-            return true;
+            return;
         } catch(RemoteException e) {
             Log.e(TAG, "Error sending message");
-            return false;
+            return;
         }
     }
 
     /**
      * Function for handling incoming messages from the service.
+     * If they are request objects, we split them to a request receiver, otherwise pass them on.
      * @param m The message that was received.
      */
-    public abstract void handleResponse(Message m);
+    public void handleResponse(Message m) {
+        if(m.what == ServerService.MSG_REQUEST_OBJECT) {
+            Bundle data = m.getData();
+            RequestObject r = data.getParcelable(ServerService.KEY_REQUEST_OBJECT);
+            if(r == null) {
+                Log.e(TAG, "Invalid response from server. Missing request object");
+                return;
+            }
+
+            if(requestReceiver != null)
+                requestReceiver.handleRequest(r);
+        }
+        else
+        {
+            if(messageReceiver != null)
+                messageReceiver.onMessageReceived(m);
+        }
+    }
+
+    /**
+     * Sets an object to receive request objects from the server
+     * @param r Request Receiver to get requests
+     */
+    public void setRequestReceiver(RequestObject.RequestReceiver r)
+    {
+        requestReceiver = r;
+    }
+
+    /**
+     * Sets an object to receive other service messages.
+     * @param s Object to receive messages.
+     */
+    public void setMessageReceiver(ServiceMessageReceiver s)
+    {
+        messageReceiver = s;
+    }
 
     /**
      * Handler class to capture messages received from the server
@@ -231,4 +280,6 @@ public abstract class ServiceClient {
             handleResponse(m); //Let the overriding class handle incomming messages.
         }
     }
+
+
 }

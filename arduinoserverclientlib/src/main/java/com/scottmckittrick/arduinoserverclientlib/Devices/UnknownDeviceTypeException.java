@@ -1,4 +1,4 @@
-package com.scottmckittrick.arduinoserverclientlib.TCPClient;
+package com.scottmckittrick.arduinoserverclientlib.Devices;
 
 /**
  * Thrown when an unknown device type is requested.
