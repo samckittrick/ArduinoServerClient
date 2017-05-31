@@ -117,7 +117,7 @@ public class Authenticator {
                 throw new InvalidAuthenticationMessageException("No response received from the server after auth request");
 
             if((packet[0] != AUTHTYPE_RSPSUCCESS) && packet[0] != AUTHTYPE_RSPMOREINFO)
-                throw new InvalidAuthenticationMessageException("Invalid response from server after auth request.");
+                throw new InvalidAuthenticationMessageException("Invalid response from server after auth request. Type: " + packet[0]);
 
             //If we receive a success, don't send back anything. Just record the state.
             if(packet[0] == AUTHTYPE_RSPSUCCESS) {

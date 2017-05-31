@@ -374,6 +374,7 @@ public class ServerService extends Service implements Connection.ConnectionMonit
                 byte[] response = authenticator.handleAuthPacket(p.getData());
                 if(authenticator.getAuthenticated())
                 {
+                    Log.d(TAG, "Authentication Succeeded.");
                     sendMessage(MSG_AUTHENTICATION_SUCCEEDED, null);
                 }
 

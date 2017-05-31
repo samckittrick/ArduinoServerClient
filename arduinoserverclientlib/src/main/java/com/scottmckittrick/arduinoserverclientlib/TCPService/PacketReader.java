@@ -69,6 +69,9 @@ public class PacketReader {
                 throw new IOException("Connection Lost");
             dataRead += tmp;
         }
+        frameCount = 0;
+        dataLen = 0;
+        dataRead = 0;
 
         //Once the packet is read. Package it.
         PacketConstants.Packet p = new PacketConstants.Packet(packetType, data);

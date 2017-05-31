@@ -2,7 +2,6 @@ package com.scottmckittrick.arduinoserverclientlib.AuthenticationScheme;
 
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.util.Log;
 
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -55,7 +54,7 @@ public class BasicSharedSecretScheme extends AuthenticationScheme implements Par
         String dateString = f.format(helper.getCurrentTime());
         String s = secret + id + dateString;
         //System.out.println(s);
-        Log.d("SharedSecretScheme", "Prehash: " + s);
+        //Log.d("SharedSecretScheme", "Prehash: " + s);
         MessageDigest dgst = null;
         try
         {
