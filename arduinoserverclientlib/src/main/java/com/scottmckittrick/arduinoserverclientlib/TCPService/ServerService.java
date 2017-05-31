@@ -18,15 +18,16 @@ import com.scottmckittrick.arduinoserverclientlib.InvalidRequestDataException;
 import com.scottmckittrick.arduinoserverclientlib.RequestObject;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.util.ArrayList;
+
+import static com.scottmckittrick.arduinoserverclientlib.TCPService.PacketConstants.PACKET_TYPE_AUTH;
 
 /**
  * Object representing a server that can be connected to.
  * Created by Scott on 5/6/2017.
  */
 
-public class ServerService extends Service implements PacketReceiver {
+public class ServerService extends Service implements Connection.ConnectionMonitor {
     //Service Message Types
     /** Service Message type indicating a client should be registered for callbacks. */
     public static final int MSG_REGISTER_CLIENT = 1;
@@ -84,8 +85,8 @@ public class ServerService extends Service implements PacketReceiver {
      private Connection conn;
     /** Authenticator object for authenticating to the server */
     private Authenticator authenticator;
-    /** Boolean indicating whether or not a server connectin is active. */
-    private boolean isConnected = false;
+    /** Thread for running the connection */
+    Thread connThread;
 
     /**
      * Create a new server service.
@@ -155,7 +156,7 @@ public class ServerService extends Service implements PacketReceiver {
     private void setAuthenticationScheme(Bundle b)
     {
         Log.d(TAG, "Registering Authentication Scheme");
-        if(isConnected) {
+        if((conn != null) && (conn.getIsConnected())) {
             Log.w(TAG, "Server is already connected. Not adding auth scheme");
             return;
         }
@@ -174,15 +175,13 @@ public class ServerService extends Service implements PacketReceiver {
      * Actually connect to the server.
      * @param data Bundle containing the IP and port of the server.
      */
-    private void connectServer(Bundle data)
-    {
+    private void connectServer(Bundle data) {
         Log.i(TAG, "Connecting to server");
         String ip = data.getString(KEY_SERVER_IP);
         int port = data.getInt(KEY_SERVER_PORT);
 
         //If they didn't send us an IP, we cannot connect to the server
-        if(ip == null)
-        {
+        if (ip == null) {
             Log.e(TAG, "Server ip cannot be null");
             Bundle rspBundle = new Bundle();
             rspBundle.putString(KEY_ERROR_MESSAGE, "IP Cannot be null");
@@ -191,28 +190,22 @@ public class ServerService extends Service implements PacketReceiver {
         }
 
         //If we are already connected, we shouldn't be trying again.
-        if(isConnected)
-        {
+        if ((conn != null) && (conn.getIsConnected())) {
             Log.w(TAG, "Connection is already set up.");
             sendMessage(MSG_CONNECT_SUCCESS, null);
-        }
-        else {
+        } else {
             //Otherwise lets create the connection
-            try {
-                conn = new Connection(ip, port);
-                conn.setPacketReceiver(this);
-                conn.connect();
-            }
-            catch(ConnectException e)
-            {
-                Log.e(TAG, "Error connecting socket: " + e.getMessage());
-                Bundle rspBundle = new Bundle();
-                rspBundle.putString(KEY_ERROR_MESSAGE, "Error connecting to socket");
-                sendMessage(MSG_CONNECT_FAILURE, rspBundle);
-                return;
-            }
+            conn = new Connection(ip, port, new Handler(), this);
+            connThread = new Thread(conn);
+            connThread.start();
         }
+    }
 
+    /**
+     * Send the first authentication packet.
+     */
+    public void startAuthenticate()
+    {
         //Once the connection is sent, we need to initiate the auth process
         //But if the authenticator is null, we can't do that.
         if(authenticator == null)
@@ -231,10 +224,11 @@ public class ServerService extends Service implements PacketReceiver {
             sendMessage(MSG_AUTHENTICATION_SUCCEEDED, null);
         }
         else {
-            //Start to authenticate the connection
+            //Start to startAuthenticate the connection
             Log.i(TAG, "Starting Authentication Process");
             try {
-                authenticator.handleAuthPacket(null);
+                PacketConstants.Packet authPacket = new PacketConstants.Packet(PACKET_TYPE_AUTH, authenticator.handleAuthPacket(null));
+                conn.writePacket(authPacket);
             }catch(AuthenticationException e) {
                 Log.e(TAG, "Authentication failed: " + e.getMessage());
                 Bundle rspBundle = new Bundle();
@@ -246,6 +240,13 @@ public class ServerService extends Service implements PacketReceiver {
                 Bundle rspBundle = new Bundle();
                 rspBundle.putString(KEY_ERROR_MESSAGE, "Authentication failed. Server sent an invalid response.");
                 sendMessage(MSG_AUTHENTICATION_FAILED, rspBundle);
+                return;
+            } catch(IOException e) {
+                Log.e(TAG, "Lost Connection to server: " + e.getMessage());
+                Bundle rspBundle = new Bundle();
+                rspBundle.putString(KEY_ERROR_MESSAGE, "Authentication failed. Lost Connection to server.");
+                sendMessage(MSG_AUTHENTICATION_FAILED, rspBundle);
+                disconnectServer();
                 return;
             }
         }
@@ -275,18 +276,13 @@ public class ServerService extends Service implements PacketReceiver {
     /**
      * Disconnect from the server.
      */
-    //ToDo how do I handle the server closing the connection?
     private void disconnectServer()
     {
-        try {
-            conn.disconnect();
-        }catch(ConnectException e) {
-            Log.e(TAG, "Error disconnecting from server: " + e.getMessage());
-        }
-
+        //Interrupting the thread will cause it to disconnect
+        connThread.interrupt();
         //Destroy the connection objects
         conn = null;
-        isConnected = false;
+        connThread = null;
         sendMessage(MSG_SERVER_DISCONNECTED, null);
     }
 
@@ -303,7 +299,7 @@ public class ServerService extends Service implements PacketReceiver {
             b.putString(KEY_ERROR_MESSAGE, "Request object cannot be null");
             sendMessage(MSG_REQUEST_SEND_FAILED, b);
             return;
-        }else if(!isConnected) { //If we arne't connected then we can't send requests.
+        }else if(!conn.getIsConnected()) { //If we arne't connected then we can't send requests.
             Log.e(TAG, "Server is not yet connected.");
             Bundle b = new Bundle();
             b.putString(KEY_ERROR_MESSAGE, "Not connected to server yet.");
@@ -315,8 +311,9 @@ public class ServerService extends Service implements PacketReceiver {
             } catch(IOException e){
                 Log.e(TAG, "Errror serializing request: " + e.getMessage());
                 Bundle b = new Bundle();
-                b.putString(KEY_ERROR_MESSAGE, "Error sending request");
+                b.putString(KEY_ERROR_MESSAGE, "Error sending request. Lost Connection to server");
                 sendMessage(MSG_REQUEST_SEND_FAILED, b);
+                disconnectServer();
             }
         }
     }
@@ -371,7 +368,7 @@ public class ServerService extends Service implements PacketReceiver {
     @Override
     public void onPacketReceived(PacketConstants.Packet p)
     {
-        if(p.getType() == PacketConstants.PACKET_TYPE_AUTH) {
+        if(p.getType() == PACKET_TYPE_AUTH) {
             try {
                 //Handle the authentication packets.
                 byte[] response = authenticator.handleAuthPacket(p.getData());
@@ -384,12 +381,13 @@ public class ServerService extends Service implements PacketReceiver {
                 if(response != null)
                 {
                     try {
-                        conn.writePacket(new PacketConstants.Packet(PacketConstants.PACKET_TYPE_AUTH, response));
+                        conn.writePacket(new PacketConstants.Packet(PACKET_TYPE_AUTH, response));
                     }catch(IOException e) {
                         Log.e(TAG, "Error sending authentication messages: " + e.getMessage());
                         Bundle b = new Bundle();
-                        b.putString(KEY_ERROR_MESSAGE, "Error sending authentication messages");
+                        b.putString(KEY_ERROR_MESSAGE, "Error sending authentication messages. Lost Connection to server");
                         sendMessage(MSG_REQUEST_SEND_FAILED, b);
+                        disconnectServer();
                         return;
                     }
                 }
@@ -423,6 +421,33 @@ public class ServerService extends Service implements PacketReceiver {
                 sendMessage(MSG_REQUEST_SEND_FAILED, b);
                 return;
             }
+        }
+    }
+
+    /**
+     * Handle changes to the connection state
+     * @param c The new connection state
+     */
+    @Override
+    public void onConnectionStateChanged(Connection.ConnectionState c)
+    {
+        Bundle rspBundle;
+        switch(c)
+        {
+            case STATE_CONNECTED:
+                startAuthenticate();
+                break;
+            case STATE_CONNECTION_FAILED:
+                rspBundle = new Bundle();
+                rspBundle.putString(KEY_ERROR_MESSAGE, "Socket failed to connect");
+                sendMessage(MSG_CONNECT_FAILURE, rspBundle);
+                break;
+            case STATE_CONNECTION_LOST:
+                disconnectServer();
+                rspBundle = new Bundle();
+                rspBundle.putString(KEY_ERROR_MESSAGE, "Connection to the server has been lost");
+                sendMessage(MSG_CONNECT_FAILURE, rspBundle);
+                break;
         }
     }
 }

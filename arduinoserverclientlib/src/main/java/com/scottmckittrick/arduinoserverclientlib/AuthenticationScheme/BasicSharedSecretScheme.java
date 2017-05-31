@@ -9,9 +9,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
- * Basic Shared Secret Scheme. Initialize it with a password and the client id and it will authenticate to the server.
+ * Basic Shared Secret Scheme. Initialize it with a password and the client id and it will startAuthenticate to the server.
  * Created by Scott on 4/21/2017.
  */
 
@@ -50,6 +51,7 @@ public class BasicSharedSecretScheme extends AuthenticationScheme implements Par
     {
         byte[] array = new byte[56];
         SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        f.setTimeZone(TimeZone.getTimeZone("GMT"));
         String dateString = f.format(helper.getCurrentTime());
         String s = secret + id + dateString;
         //System.out.println(s);
@@ -124,6 +126,7 @@ public class BasicSharedSecretScheme extends AuthenticationScheme implements Par
         secret = p.readString();
         isAuthenticated = p.readInt() == 1;
         id = p.readInt();
+        helper = new TimeHelper();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.scottmckittrick.arduinoserverclientlib.TCPService;
 
-import android.os.AsyncTask;
+import android.os.Handler;
+import android.util.Log;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -8,13 +9,14 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Provides and manages tcp connections to the server.
  * Created by Scott on 5/6/2017.
  */
 
-public class Connection {
+public class Connection implements Runnable{
     /** The Ipv4 Address of the server */
     private String ipAddr;
     /** The port of the server */
@@ -28,24 +30,29 @@ public class Connection {
     /** Socket object */
     private Socket mSocket;
     /** True if the read thread is running */
-    private boolean isRunning;
+    private AtomicBoolean isRunning;
     /** True if the socket is connected */
-    private boolean isConnected;
-    /** Object to send received packets to */
-    private PacketReceiver receiver;
-    /** The read task */
-    private PacketReadTask readTask;
+    private AtomicBoolean isConnected;
+    /** Handler from the thread object to send received packets to */
+    private Handler callerHandler;
+    /** Object receiving packets */
+    private ConnectionMonitor connectionMonitor;
+    /** Connection log tag */
+    private static final String TAG = "Connection";
 
+    /** Enum representing connection states */
+    public enum ConnectionState { STATE_DISCONNECTED, STATE_CONNECTED, STATE_CONNECTION_FAILED, STATE_CONNECTION_LOST }
 
     /**
      * Constructor to create connection
      * @param ipAddr The ipv4 address of the server
      * @param port The port of the server
+     * @param receiver A handler to receive packets from the socket.
      */
-    public Connection(String ipAddr, int port)
+    public Connection(String ipAddr, int port, Handler receiver, ConnectionMonitor p)
     {
         //default timeout is 1000
-        this(ipAddr, port, 1000);
+        this(ipAddr, port, 1000, receiver, p);
     }
 
     /**
@@ -53,42 +60,21 @@ public class Connection {
      * @param ipAddr The ipv4 address of the server
      * @param port The port of the server
      * @param timeout The length of time in milliseconds that the socket should wait.
+     * @param receiver A handler to receive packets from the .
      */
-    public Connection( String ipAddr, int port, int timeout)
-    {
-        this(ipAddr, port, timeout, null);
-    }
-
-
-
-    /**
-     * Constructor to create a connection
-     * @param ipAddr The ipv4 address of the server
-     * @param port The port of the server
-     * @param timeout The length of time in milliseconds that the socket should wait.
-     * @param r A packet receiver to be called when a packet is received.
-     */
-    public Connection( String ipAddr, int port, int timeout, PacketReceiver r)
+    public Connection( String ipAddr, int port, int timeout, Handler receiver, ConnectionMonitor p)
     {
         this.ipAddr = ipAddr;
         this.port = port;
         this.timeout = timeout;
-        isRunning = false;
-        isConnected = false;
-        receiver = r;
+        callerHandler = receiver;
+        connectionMonitor = p;
+        isRunning = new AtomicBoolean(false);
+        isConnected = new AtomicBoolean(false);
     }
 
     /**
-     * Set a callback to receive the packets read from the socket
-     * @param r A packet receiver to be called when a packet is received.
-     */
-    public void setPacketReceiver(PacketReceiver r)
-    {
-        receiver = r;
-    }
-
-    /**
-     * Connect and authenticate to the server
+     * Connect and startAuthenticate to the server
      * @throws ConnectException When the socket connection fails
      */
     private void connectSocket() throws ConnectException
@@ -104,17 +90,14 @@ public class Connection {
                 //Get the Input and OutputStreams
                 packetWriter = new PacketWriter(mSocket.getOutputStream());
                 packetReader = new PacketReader(mSocket.getInputStream());
-                isConnected = true;
+                isConnected.set(true);
             }
             catch(IOException e)
             {
-                throw new ConnectException("Error getting packet streams");
-            }
-            finally{
                 mSocket.close();
                 mSocket = null;
+                throw new ConnectException("Error getting packet streams");
             }
-
         }
         catch(UnknownHostException e) {
             throw new ConnectException("Unknown host: " + ipAddr);
@@ -124,19 +107,45 @@ public class Connection {
         }
     }
 
-    /**
-     * Connect to the server
-     * @throws ConnectException Throws when there is an issue connecting
-     */
-    public void connect() throws ConnectException
+    @Override
+    public void run()
     {
-        //Connect the socket.
-        connectSocket();
+        try {
+            Log.d(TAG, "Starting read thread. Connecting Socket..");
+            connectSocket();
+            connectionMonitor.onConnectionStateChanged(ConnectionState.STATE_CONNECTED);
+        }catch (ConnectException e) {
+            Log.e(TAG, e.getMessage());
+            connectionMonitor.onConnectionStateChanged(ConnectionState.STATE_CONNECTION_FAILED);
+        }
 
-        //Start the read task
-        isRunning = true;
-        readTask = new PacketReadTask();
-        readTask.execute(packetReader);
+        Log.d(TAG, "Socket Connected. While loop starting");
+        while(!Thread.currentThread().isInterrupted())
+        {
+            try {
+                final PacketConstants.Packet p = packetReader.read();
+                callerHandler.post(new Runnable() {
+                    @Override
+                    public void run(){
+                        connectionMonitor.onPacketReceived(p);
+                    }
+                });
+            }catch(SocketTimeoutException e){
+                continue;
+            } catch(IOException e) {
+                Log.e(TAG, e.getMessage());
+                connectionMonitor.onConnectionStateChanged(ConnectionState.STATE_CONNECTION_LOST);
+            }
+        }
+
+        //If we make ithere, we should disconnect the socket.
+        try {
+            disconnect();
+        }catch(ConnectException e) {
+            Log.e(TAG, e.getMessage());
+        } finally {
+            connectionMonitor.onConnectionStateChanged(ConnectionState.STATE_DISCONNECTED);
+        }
     }
 
     /**
@@ -146,7 +155,7 @@ public class Connection {
     public void disconnect() throws ConnectException
     {
         try {
-            isRunning = false;
+            isConnected.set(false);
             packetReader.close();
             packetWriter.close();
             mSocket.close();
@@ -162,43 +171,29 @@ public class Connection {
      * @param p packet being sent
      * @throws IOException Thrown when there is a problem sending the packet.
      */
-    public void writePacket(PacketConstants.Packet p ) throws IOException
+    public synchronized void writePacket(PacketConstants.Packet p ) throws IOException
     {
+        if(!isConnected.get())
+            throw new IOException("Socket is not connected.");
+
         packetWriter.writePacket(p);
     }
 
     /**
-     * Async Task for reading from the socket
+     * Get the current connection state
      */
-    private class PacketReadTask extends AsyncTask<PacketReader, PacketConstants.Packet, Boolean>
+    public boolean getIsConnected()
     {
-        @Override
-        protected Boolean doInBackground(PacketReader... p)
-        {
-            while(isRunning)
-            {
-                try {
-                    PacketConstants.Packet result = p[0].read();
-                    publishProgress(result);
-                }
-                catch(SocketTimeoutException e)
-                {
-                    //Read again if the socket times out.
-                    continue;
-                }
-                catch(IOException e)
-                {
-                    return false;
-                }
-            }
-            //If we get here, we exited cleanly
-            return true;
-        }
-
-        @Override
-        protected void onProgressUpdate(PacketConstants.Packet... packets){
-            if(receiver != null)
-                receiver.onPacketReceived(packets[0]);
-        }
+        return isConnected.get();
     }
+
+    /**
+     * A connection monitor
+     */
+    public interface ConnectionMonitor {
+        void onPacketReceived(PacketConstants.Packet p);
+        void onConnectionStateChanged(ConnectionState c);
+    }
+
+
 }

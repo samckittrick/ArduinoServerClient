@@ -17,7 +17,7 @@ class PacketConstants {
     /**
      * Immutable packet class containing the packet that was received.
      */
-    public static class Packet {
+    public static class Packet{
         private byte packetType;
         private byte[] data;
 
@@ -50,4 +50,5 @@ class PacketConstants {
             return out;
         }
     }
+
 }

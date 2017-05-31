@@ -45,11 +45,17 @@ public class PacketReader {
             throw new IOException("InputStream is null");
 
         //Read the frame header first
-        while(frameCount < PacketConstants.FRAME_LEAD_SIZE)
-            dataLen |= istream.read() << (PacketConstants.FRAME_LEAD_SIZE - frameCount++ - 1); //As we read it in, place it in the data length variable
+        while(frameCount < PacketConstants.FRAME_LEAD_SIZE) {
+            int tmp = istream.read() << (PacketConstants.FRAME_LEAD_SIZE - frameCount++ - 1);//As we read it in, place it in the data length variable
+            if (tmp < 0)
+                throw new IOException("Lost Connection");
+            dataLen |= tmp;
+        }
 
         //Next read the type
         packetType = (byte)istream.read();
+        if(packetType < 0)
+            throw new IOException("Lost Connection");
         //Account for the fact that part of the length is the type
         dataLen--;
 
@@ -58,7 +64,10 @@ public class PacketReader {
 
         //Begin reading data;
         while(dataRead < dataLen) {
-            dataRead += istream.read(data, dataRead, (dataLen - dataRead));
+            int tmp = istream.read(data, dataRead, (dataLen - dataRead));
+            if(tmp < 0)
+                throw new IOException("Connection Lost");
+            dataRead += tmp;
         }
 
         //Once the packet is read. Package it.
