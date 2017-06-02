@@ -48,6 +48,7 @@ public class DeviceManager implements RequestObject.RequestReceiver {
      * Basic Constructor.
      */
     public DeviceManager() {
+        Log.d("Device Manager", "Device Manager being created");
         devList = new ArrayList();
         deviceChangeListeners = new ArrayList();
     }
@@ -130,6 +131,7 @@ public class DeviceManager implements RequestObject.RequestReceiver {
      */
     private void updateDeviceList(byte[] packet) throws InvalidDeviceListException
     {
+        ArrayList<BasicDevice> changedList = new ArrayList<>();
         //The device list data should have at least one byte saying 0 devices.
         if((packet == null)||(packet.length < 1))
             throw new InvalidDeviceListException("Null Device List Received.");
@@ -137,6 +139,7 @@ public class DeviceManager implements RequestObject.RequestReceiver {
         //First byte is the number of device entries.
         int index = 0;
         int numDevices = packet[index++];
+        Log.d(TAG, "Number of Devices: " + numDevices);
 
         if(numDevices == 0)
             return;
@@ -148,22 +151,36 @@ public class DeviceManager implements RequestObject.RequestReceiver {
                 int pointer = 0;
 
                 //Begin parsing the entry
-                int devType = packet[index + pointer];
-                int devId = packet[index + pointer];
+                int devType = packet[index + pointer++];
+                Log.d(TAG, "Device Type: " + devType);
+                int devId = packet[index + pointer++];
+                Log.d(TAG, "Device Id: " + devId);
                 byte[] devNameBytes = new byte[entryLength - 2];
+                for(int j = 0; j < devNameBytes.length; j++)
+                    devNameBytes[j] = packet[index + pointer++];
                 String devName = new String(devNameBytes, "US-ASCII");
-                Log.d(TAG, "Instantiating "+ devName);
+                Log.d(TAG, "Device Name: " + devName);
 
                 //If the device already exists, skip it.
-                for(int j= 0; j < devList.size(); j++)
-                    if(devList.get(j).getDeviceId() == devId)
-                        continue;
+                boolean deviceFound = false;
+                for(int j= 0; j < devList.size(); j++) {
+                    if (devList.get(j).getDeviceId() == devId) {
+                        deviceFound = true;
+                        break;
+                    }
+                }
+
+                //If the device is already in the list, then skip it.
+                if(deviceFound)
+                    continue;
 
                 //Otherwise create a new one.
                 try {
+                    Log.d(TAG, "Instantiating "+ devName);
                     BasicDevice d = DeviceManager.instantiateDevice(devType, devId, devName);
                     d.setRequestReceiver(requestReceiver);
                     devList.add(d);
+                    changedList.add(d);
                 } catch(UnknownDeviceTypeException e) {
                     //ToDo Handle unknown device
                 }
@@ -171,6 +188,10 @@ public class DeviceManager implements RequestObject.RequestReceiver {
                 index += entryLength;
 
             }
+
+            if(changedList.size() > 0)
+                notifyDeviceChange(changedList);
+
         }catch(ArrayIndexOutOfBoundsException e) {
             throw new InvalidDeviceListException("Packet length is too short for the indicated number of devices.");
         }catch(UnsupportedEncodingException e) {

@@ -237,6 +237,7 @@ public class ServiceClient implements RequestObject.RequestReceiver {
     public void handleResponse(Message m) {
         if(m.what == ServerService.MSG_REQUEST_OBJECT) {
             Bundle data = m.getData();
+            data.setClassLoader(RequestObject.class.getClassLoader());
             RequestObject r = data.getParcelable(ServerService.KEY_REQUEST_OBJECT);
             if(r == null) {
                 Log.e(TAG, "Invalid response from server. Missing request object");

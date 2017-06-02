@@ -117,6 +117,7 @@ public class Connection implements Runnable{
         }catch (ConnectException e) {
             Log.e(TAG, e.getMessage());
             connectionMonitor.onConnectionStateChanged(ConnectionState.STATE_CONNECTION_FAILED);
+            return;
         }
 
         Log.d(TAG, "Socket Connected. While loop starting");

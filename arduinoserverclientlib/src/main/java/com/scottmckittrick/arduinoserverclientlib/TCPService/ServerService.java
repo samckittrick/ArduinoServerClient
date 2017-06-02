@@ -291,6 +291,7 @@ public class ServerService extends Service implements Connection.ConnectionMonit
      * @param data A bundle holding the request object from the client.
      */
     private void handleRequest(Bundle data) {
+        data.setClassLoader(RequestObject.class.getClassLoader());
         RequestObject req = data.getParcelable(KEY_REQUEST_OBJECT);
         if(req == null)
         {
@@ -436,6 +437,7 @@ public class ServerService extends Service implements Connection.ConnectionMonit
         switch(c)
         {
             case STATE_CONNECTED:
+                sendMessage(MSG_CONNECT_SUCCESS, null);
                 startAuthenticate();
                 break;
             case STATE_CONNECTION_FAILED:
