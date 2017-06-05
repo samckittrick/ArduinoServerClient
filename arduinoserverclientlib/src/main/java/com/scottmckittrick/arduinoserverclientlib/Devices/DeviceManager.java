@@ -148,14 +148,17 @@ public class DeviceManager implements RequestObject.RequestReceiver {
             //Read each device entry
             for (int i = 0; i < numDevices; i++) {
                 int entryLength = packet[index++];
+                Log.d(TAG, "Entry Length: " + entryLength);
                 int pointer = 0;
 
                 //Begin parsing the entry
+                int devAddr = packet[index + pointer++];
+                Log.d(TAG, "Device address: " + devAddr);
                 int devType = packet[index + pointer++];
                 Log.d(TAG, "Device Type: " + devType);
                 int devId = packet[index + pointer++];
                 Log.d(TAG, "Device Id: " + devId);
-                byte[] devNameBytes = new byte[entryLength - 2];
+                byte[] devNameBytes = new byte[entryLength - 3];
                 for(int j = 0; j < devNameBytes.length; j++)
                     devNameBytes[j] = packet[index + pointer++];
                 String devName = new String(devNameBytes, "US-ASCII");
@@ -164,7 +167,7 @@ public class DeviceManager implements RequestObject.RequestReceiver {
                 //If the device already exists, skip it.
                 boolean deviceFound = false;
                 for(int j= 0; j < devList.size(); j++) {
-                    if (devList.get(j).getDeviceId() == devId) {
+                    if (devList.get(j).getDeviceAddr() == devAddr) {
                         deviceFound = true;
                         break;
                     }
@@ -177,7 +180,7 @@ public class DeviceManager implements RequestObject.RequestReceiver {
                 //Otherwise create a new one.
                 try {
                     Log.d(TAG, "Instantiating "+ devName);
-                    BasicDevice d = DeviceManager.instantiateDevice(devType, devId, devName);
+                    BasicDevice d = DeviceManager.instantiateDevice(devType, devId, devName, devAddr);
                     d.setRequestReceiver(requestReceiver);
                     devList.add(d);
                     changedList.add(d);
@@ -207,12 +210,12 @@ public class DeviceManager implements RequestObject.RequestReceiver {
      * @return An object of BasicDevice that can be cast to the requested type.
      * @throws UnknownDeviceTypeException Throws Unknown device type when the type of device requested is unknown.
      */
-    private static BasicDevice instantiateDevice(int type, int id, String deviceName) throws UnknownDeviceTypeException
+    private static BasicDevice instantiateDevice(int type, int id, String deviceName, int deviceAddr) throws UnknownDeviceTypeException
     {
         switch(type)
         {
             case DEVICE_TYPE_RGB_LAMP:
-                return new RGBLampDevice(id, deviceName);
+                return new RGBLampDevice(id, deviceName, deviceAddr);
             default:
                 throw new UnknownDeviceTypeException("Unknown Device Type: " + type);
         }

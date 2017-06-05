@@ -9,8 +9,6 @@ import java.util.Arrays;
  * Immutable object representing an request from one object to another.
  * Created by Scott on 4/23/2017.
  */
-
-//ToDo make parcelable.
 public class RequestObject implements Parcelable {
     /** The size of the serialized header */
     public static int HEADER_SIZE = 3;

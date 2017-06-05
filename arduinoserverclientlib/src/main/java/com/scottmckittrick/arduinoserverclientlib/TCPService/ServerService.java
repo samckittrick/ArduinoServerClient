@@ -279,7 +279,8 @@ public class ServerService extends Service implements Connection.ConnectionMonit
     private void disconnectServer()
     {
         //Interrupting the thread will cause it to disconnect
-        connThread.interrupt();
+        if(connThread != null)
+            connThread.interrupt();
         //Destroy the connection objects
         conn = null;
         connThread = null;

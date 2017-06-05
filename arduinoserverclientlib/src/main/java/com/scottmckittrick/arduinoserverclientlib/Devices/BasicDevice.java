@@ -13,16 +13,19 @@ public abstract class BasicDevice implements RequestObject.RequestReceiver {
     private int deviceId;
     private int deviceType;
     private String deviceName;
+    private int deviceAddr;
     private RequestObject.RequestReceiver receiver;
 
     /**
      * Constructor to create new device.
      * @param deviceId Id of the device.
      * @param deviceName The name of the device.
+     * @param deviceAddr The address of the device
      */
-    public BasicDevice(int deviceId, String deviceName) {
+    public BasicDevice(int deviceId, String deviceName, int deviceAddr) {
         this.deviceId = deviceId;
         this.deviceName = deviceName;
+        this.deviceAddr = deviceAddr;
     }
 
     /**
@@ -40,6 +43,12 @@ public abstract class BasicDevice implements RequestObject.RequestReceiver {
     public String getDeviceName(){
         return deviceName;
     }
+
+    /**
+     * Get the address of the device
+     * @return The device address
+     */
+    public int getDeviceAddr() { return deviceAddr; }
 
     /**
      * Get the type of the device
@@ -62,4 +71,10 @@ public abstract class BasicDevice implements RequestObject.RequestReceiver {
     {
         receiver = r;
     }
+
+    /**
+     * Get the request receiver this object should send requests to.
+     * @return The request receiver for this object.
+     */
+    protected RequestObject.RequestReceiver getRequestReceiver() { return receiver; }
 }
