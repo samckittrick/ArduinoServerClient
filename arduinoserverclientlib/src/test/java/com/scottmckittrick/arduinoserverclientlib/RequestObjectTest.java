@@ -45,7 +45,7 @@ public class RequestObjectTest {
         byte[] expectedSerialized = { 0x01, 0x00, 0x02, 0x01, 0x02, 0x03 };
 
         RequestObject result = RequestObject.deserializeRequestObject(expectedSerialized);
-        Assert.assertEquals(devId, result.getDeviceId());
+        Assert.assertEquals(devId, result.getDeviceAddress());
         Assert.assertEquals(command, result.getCommand());
         Assert.assertArrayEquals(dataArray, result.getData());
     }

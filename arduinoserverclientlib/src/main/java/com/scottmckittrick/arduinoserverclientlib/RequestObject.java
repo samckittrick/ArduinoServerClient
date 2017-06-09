@@ -14,7 +14,7 @@ public class RequestObject implements Parcelable {
     public static int HEADER_SIZE = 3;
 
     /** Id of the device the request refers to */
-    private int deviceId;
+    private int deviceAddress;
     /** Command being sent */
     private short command;
     /** Any accompanying data */
@@ -22,13 +22,13 @@ public class RequestObject implements Parcelable {
 
     /**
      * Constructor to create request object
-     * @param deviceId The id of the device being referenced.
+     * @param deviceAddr The id of the device being referenced.
      * @param command The command that the request contains.
      * @param data any data that goes with the command.
      */
-    public RequestObject(int deviceId, short command, byte[] data)
+    public RequestObject(int deviceAddr, short command, byte[] data)
     {
-        this.deviceId = deviceId;
+        this.deviceAddress = deviceAddr;
         this.command = command;
 
         if(data == null) {
@@ -42,15 +42,15 @@ public class RequestObject implements Parcelable {
 
     /**
      * Constructor to create request object with array indexes
-     * @param deviceId The id of the device being referenced.
+     * @param deviceAddress The id of the device being referenced.
      * @param command The command that the request contains.
      * @param data any data that goes with the command.
      * @param offset The starting point in the array.
      * @param count The number of elements to copy.
      */
-    public RequestObject(int deviceId, short command, byte[] data, int offset, int count) throws InvalidRequestDataException
+    public RequestObject(int deviceAddress, short command, byte[] data, int offset, int count) throws InvalidRequestDataException
     {
-        this.deviceId = deviceId;
+        this.deviceAddress = deviceAddress;
         this.command = command;
 
         //Make sure we won't run into an array out of bounds condition
@@ -72,9 +72,9 @@ public class RequestObject implements Parcelable {
      * Get the id of the device that the request is going to or coming from.
      * @return Integer representing the device id.
      */
-    public int getDeviceId()
+    public int getDeviceAddress()
     {
-        return deviceId;
+        return deviceAddress;
     }
 
     /**
@@ -104,7 +104,7 @@ public class RequestObject implements Parcelable {
     @Override
     public void writeToParcel(Parcel out, int flags)
     {
-        out.writeInt(deviceId);
+        out.writeInt(deviceAddress);
         out.writeInt(command);
         out.writeInt(data.length);
         out.writeByteArray(data);
@@ -128,7 +128,7 @@ public class RequestObject implements Parcelable {
      */
     private RequestObject(Parcel p)
     {
-        deviceId = p.readInt();
+        deviceAddress = p.readInt();
         command = (short)p.readInt();
         int dataLen = p.readInt();
         data = new byte[dataLen];
@@ -147,7 +147,7 @@ public class RequestObject implements Parcelable {
         final RequestObject otherReq = (RequestObject)other;
 
         boolean result = true;
-        result &= (this.deviceId == otherReq.deviceId);
+        result &= (this.deviceAddress == otherReq.deviceAddress);
         result &= (this.command == otherReq.command);
         result &= Arrays.equals(this.data, otherReq.data);
         return result;
@@ -191,7 +191,7 @@ public class RequestObject implements Parcelable {
     public static byte[] serializeRequestObject(RequestObject r)
     {
         byte[] output = new byte[r.data.length + HEADER_SIZE];
-        output[0] = (byte)(r.deviceId & 0xFF);
+        output[0] = (byte)(r.deviceAddress & 0xFF);
         output[1] = (byte)(r.command >> 8);
         output[2] = (byte) (r.command & 0xFF);
         System.arraycopy(r.data, 0, output, 3, r.data.length);

@@ -29,6 +29,9 @@ public class DeviceManager implements RequestObject.RequestReceiver {
 
     public static final String TAG = "DeviceManager";
 
+    /** Identifier used for passing the device address between activities **/
+    public static final String devAddrTag = "DeviceAddress";
+
     /**
      * The list of devices sent by the server
      */
@@ -68,7 +71,7 @@ public class DeviceManager implements RequestObject.RequestReceiver {
     @Override
     public void handleRequest(RequestObject r) {
         //If the request is coming from the server device manager, handle it here
-        if(r.getDeviceId() == 0) {
+        if(r.getDeviceAddress() == 0) {
             if(r.getCommand() == DEV_GET_INFO_RSP){
                 try {
                     updateDeviceList(r.getData());
@@ -79,10 +82,10 @@ public class DeviceManager implements RequestObject.RequestReceiver {
             return;
         } else { //Otherwise it should be handled by one of the devices.
             try {
-                BasicDevice dev = getDeviceById(r.getDeviceId());
+                BasicDevice dev = getDeviceByAddress(r.getDeviceAddress());
                 dev.handleRequest(r);
             } catch (DeviceNotFoundException e) {
-                Log.i(TAG, "Device Id " + r.getDeviceId() + " not found.");
+                Log.i(TAG, "Device Id " + r.getDeviceAddress() + " not found.");
             }
         }
     }
@@ -122,6 +125,24 @@ public class DeviceManager implements RequestObject.RequestReceiver {
 
         //If the device isn't found throw an exception
         throw new DeviceNotFoundException("Device ID " + id + " not found.");
+    }
+
+    /**
+     * Get the device by its id. Thrpw an exception if the device doesn't exist.
+     * @param address Address of the device being searched for.
+     * @return BasicDevice instance of requested Device.
+     * @throws DeviceNotFoundException Throws DeviceNotFoundException when the requested address isn't a currently available device.
+     */
+    public BasicDevice getDeviceByAddress(int address) throws DeviceNotFoundException
+    {
+        for(int i = 0; i < devList.size(); i++)
+        {
+            if(devList.get(i).getDeviceAddr() == address)
+                return devList.get(i);
+        }
+
+        //If the device isn't found throw an exception
+        throw new DeviceNotFoundException("Device Address " + address + " not found.");
     }
 
     /**
