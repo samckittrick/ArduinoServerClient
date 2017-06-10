@@ -193,6 +193,8 @@ public class ServerService extends Service implements Connection.ConnectionMonit
         if ((conn != null) && (conn.getIsConnected())) {
             Log.w(TAG, "Connection is already set up.");
             sendMessage(MSG_CONNECT_SUCCESS, null);
+            //Since we are already connected start authentication.
+            startAuthenticate();
         } else {
             //Otherwise lets create the connection
             conn = new Connection(ip, port, new Handler(), this);

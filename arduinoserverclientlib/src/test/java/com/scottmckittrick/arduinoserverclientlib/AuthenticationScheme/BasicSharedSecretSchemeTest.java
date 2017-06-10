@@ -9,6 +9,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 import static org.mockito.Mockito.when;
 
@@ -44,6 +45,7 @@ public class BasicSharedSecretSchemeTest {
     public void testAuthenticate() throws ParseException, AuthenticationException
     {
         SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        f.setTimeZone(TimeZone.getTimeZone("GMT"));
         String expectedTimestamp ="2017-05-01T23:57:35Z";
         Date date = f.parse(expectedTimestamp);
         when(helper.getCurrentTime()).thenReturn(date);

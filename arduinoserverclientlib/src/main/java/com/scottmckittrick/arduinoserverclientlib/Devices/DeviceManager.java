@@ -31,6 +31,10 @@ public class DeviceManager implements RequestObject.RequestReceiver {
 
     /** Identifier used for passing the device address between activities **/
     public static final String devAddrTag = "DeviceAddress";
+    /** Identifier used for passing the device name between activities **/
+    public static final String devNameTag = "DeviceName";
+    /** Identifier used for passing the device id between activities **/
+    public static final String devIdTag = "DeviceID";
 
     /**
      * The list of devices sent by the server
