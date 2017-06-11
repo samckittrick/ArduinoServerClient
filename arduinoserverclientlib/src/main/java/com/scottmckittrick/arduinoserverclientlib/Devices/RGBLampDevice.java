@@ -74,6 +74,7 @@ public class RGBLampDevice extends BasicDevice {
     public void handleRequest(RequestObject r)
     {
         Log.d(TAG, "Handling Request Object");
+        Log.d(TAG, "DeviceAddress: " + r.getDeviceAddress());
         if(r.getDeviceAddress() != getDeviceAddr())
             return;
 
@@ -236,5 +237,24 @@ public class RGBLampDevice extends BasicDevice {
         return currentState;
     }
 
+    /**
+     * Get the current interval setting.
+     * @return integer representing the interval
+     */
+    public int getInterval()
+    {
+        return interval;
+    }
+
+    /**
+     * Get the current color setting.
+     * @return Byte array of RGB values, { Red, Green, Blue }
+     */
+    public byte[] getColors()
+    {
+        byte[] values = new byte[3];
+        System.arraycopy(colors, 0, values, 0, 3);
+        return values;
+    }
 
 }
